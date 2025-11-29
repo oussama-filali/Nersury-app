@@ -38,3 +38,17 @@
 ## 5. Documentation & Cleanup 📚
 - [ ] **API Documentation**: Setup Swagger/OpenAPI (optional but recommended).
 - [ ] **Code Cleanup**: Remove any unused files or temporary comments.
+
+## 6. Agenda - Aujourd'hui 🗓️
+- [ ] Vérifier `/api/v1/auth/login` avec un parent réel et conserver les tokens.
+- [ ] Tester `/api/v1/auth/refresh-token` et noter la durée des tokens.
+- [ ] Exercicer les routes `child` et `mission` (création + lecture) via Postman.
+- [ ] Lancer `docker-compose up --build` pour valider l'exécution backend + DB en conteneur.
+- [ ] Documenter les étapes de test dans `docs/` (résultats + captures éventuelles).
+
+## 7. Agenda - Demain 🚀
+- [ ] Tester les routes `chat`, `analytics`, `observation` pour couvrir tout le scope.
+- [ ] Mettre en place un script de seed (admin + jeux de données parents/enfants).
+- [ ] Ajouter une doc API (Swagger/OpenAPI ou README détaillé des endpoints).
+- [ ] Étudier l'intégration Stripe (esquisse du flow de paiement sécurisé).
+- [ ] Préparer la checklist RGPD & vérifs (hashing, encryption, retention) pour présentation aux partenaires.

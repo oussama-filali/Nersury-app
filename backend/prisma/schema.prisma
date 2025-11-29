@@ -1,0 +1,344 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// MODÈLE PARENT
+// ========================================
+model Parent {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String // Hashé avec bcrypt
+  
+  // Informations personnelles (encryptées en AES-256)
+  firstname String
+  lastname  String
+  phone     String
+  address   String // Encrypté
+  
+  // Relations
+  children       Child[]
+  missions       Mission[]
+  sentMessages   ChatMessage[] @relation("SentMessages")
+  receivedMessages ChatMessage[] @relation("ReceivedMessages")
+  
+  // Abonnement
+  subscription   SubscriptionType @default(FREE)
+  
+  // Consentements RGPD
+  consentGiven   Boolean @default(false)
+  consentDate    DateTime?
+  
+  // Métadonnées
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+  
+  // Soft delete
+  deletedAt DateTime?
+  
+  @@index([email])
+  @@map("parents")
+}
+
+// ========================================
+// MODÈLE ENFANT
+// ========================================
+model Child {
+  id        String   @id @default(uuid())
+  
+  // Informations personnelles (encryptées)
+  firstname String // Encrypté
+  lastname  String // Encrypté
+  birthdate DateTime
+  
+  // Informations médicales (hautement sensibles, encryptées)
+  medicalInfo String? // JSON encrypté
+  specialNeeds String? // Encrypté
+  
+  // Relations
+  parentId   String
+  parent     Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  
+  observations Observation[]
+  missions     Mission[]
+  analytics    Analytic[]
+  
+  // Métadonnées
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  
+  @@index([parentId])
+  @@map("children")
+}
+
+// ========================================
+// MODÈLE ANIMATEUR (INTERVENANT)
+// ========================================
+model Animator {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String // Hashé
+  
+  // Informations personnelles
+  firstname String
+  lastname  String
+  phone     String
+  address   String
+  bio       String?
+  
+  // Compétences et spécialisations
+  skills    String[] // ["TSA", "autisme", "handicap moteur"...]
+  
+  // Vérifications (conformité légale)
+  identityVerified     Boolean @default(false)
+  backgroundCheckDone  Boolean @default(false) // Casier judiciaire B2
+  certifications       String[] // URLs ou références vers documents
+  
+  // Statut
+  status AnimatorStatus @default(PENDING)
+  
+  // Disponibilités (JSON avec horaires)
+  availability String? // JSON encrypté ou structure
+  
+  // Évaluations
+  rating Decimal @default(0) @db.Decimal(3, 2)
+  reviewCount Int @default(0)
+  
+  // Relations
+  missions     Mission[]
+  observations Observation[]
+  sentMessages   ChatMessage[] @relation("AnimatorSentMessages")
+  receivedMessages ChatMessage[] @relation("AnimatorReceivedMessages")
+  
+  // Métadonnées
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+  deletedAt DateTime?
+  
+  @@index([email])
+  @@index([status])
+  @@map("animators")
+}
+
+// ========================================
+// MODÈLE OBSERVATION (RAPPORT)
+// ========================================
+model Observation {
+  id        String   @id @default(uuid())
+  
+  // Relations
+  childId   String
+  child     Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  
+  // Auteur (peut être parent ou animateur)
+  authorType AuthorType
+  parentId   String?
+  animatorId String?
+  animator   Animator? @relation(fields: [animatorId], references: [id])
+  
+  // Contenu de l'observation
+  category    ObservationCategory
+  intensity   Int // 1 à 5
+  description String // Texte libre
+  tags        String[] // ["stress", "autonomie", "communication"...]
+  
+  // Fichiers joints
+  attachments String[] // URLs vers fichiers sécurisés
+  
+  // Métadonnées
+  observedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+  
+  @@index([childId])
+  @@index([observedAt])
+  @@map("observations")
+}
+
+// ========================================
+// MODÈLE MISSION (INTERVENTION)
+// ========================================
+model Mission {
+  id        String   @id @default(uuid())
+  
+  // Relations
+  parentId   String
+  parent     Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  
+  childId    String
+  child      Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  
+  animatorId String?
+  animator   Animator? @relation(fields: [animatorId], references: [id])
+  
+  // Planification
+  startTime DateTime
+  endTime   DateTime
+  
+  // Statut
+  status MissionStatus @default(PENDING)
+  
+  // Notes
+  notesParent    String?
+  notesAnimator  String?
+  
+  // Évaluation post-intervention
+  ratingParent   Int? // 1 à 5
+  ratingAnimator Int? // 1 à 5
+  
+  // Relations
+  chatMessages ChatMessage[]
+  
+  // Métadonnées
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  
+  @@index([parentId])
+  @@index([childId])
+  @@index([animatorId])
+  @@index([startTime])
+  @@map("missions")
+}
+
+// ========================================
+// MODÈLE CHAT
+// ========================================
+model ChatMessage {
+  id        String   @id @default(uuid())
+  
+  // Relations
+  missionId String?
+  mission   Mission? @relation(fields: [missionId], references: [id], onDelete: SetNull)
+  
+  // Expéditeur / Destinataire (polymorphique)
+  senderType   UserType
+  receiverType UserType
+  
+  // Parent ou Animateur
+  senderParentId   String?
+  senderParent     Parent? @relation("SentMessages", fields: [senderParentId], references: [id])
+  
+  receiverParentId String?
+  receiverParent   Parent? @relation("ReceivedMessages", fields: [receiverParentId], references: [id])
+  
+  senderAnimatorId   String?
+  senderAnimator     Animator? @relation("AnimatorSentMessages", fields: [senderAnimatorId], references: [id])
+  
+  receiverAnimatorId String?
+  receiverAnimator   Animator? @relation("AnimatorReceivedMessages", fields: [receiverAnimatorId], references: [id])
+  
+  // Contenu
+  content String
+  read    Boolean @default(false)
+  
+  // Métadonnées
+  sentAt    DateTime @default(now())
+  deletedAt DateTime?
+  
+  @@index([missionId])
+  @@index([senderParentId])
+  @@index([senderAnimatorId])
+  @@map("chat_messages")
+}
+
+// ========================================
+// MODÈLE ANALYTICS (RÉSULTATS ANALYSES)
+// ========================================
+model Analytic {
+  id        String   @id @default(uuid())
+  
+  // Relations
+  childId   String
+  child     Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  
+  // Type d'analyse
+  type AnalyticType
+  
+  // Résultats (JSON structuré)
+  content String // JSON avec patterns détectés
+  
+  // Synthèse textuelle générée
+  summary String
+  
+  // Suggestions douces
+  suggestions String[]
+  
+  // Période analysée
+  periodStart DateTime
+  periodEnd   DateTime
+  
+  // Métadonnées
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  
+  @@index([childId])
+  @@index([createdAt])
+  @@map("analytics")
+}
+
+// ========================================
+// ENUMS
+// ========================================
+
+enum SubscriptionType {
+  FREE
+  PREMIUM
+  PRO
+}
+
+enum AnimatorStatus {
+  PENDING      // En attente de vérification
+  VERIFIED     // Vérifié et actif
+  SUSPENDED    // Suspendu temporairement
+  REJECTED     // Rejeté
+}
+
+enum AuthorType {
+  PARENT
+  ANIMATOR
+}
+
+enum ObservationCategory {
+  EMOTIONAL      // Émotionnelle
+  BEHAVIORAL     // Comportementale
+  SOCIAL         // Sociale
+  COGNITIVE      // Cognitive
+  PHYSICAL       // Physique
+  EDUCATIONAL    // Scolaire/Éducative
+  OTHER          // Autre
+}
+
+enum MissionStatus {
+  PENDING        // En attente
+  ACCEPTED       // Acceptée par l'animateur
+  CONFIRMED      // Confirmée par le parent
+  IN_PROGRESS    // En cours
+  COMPLETED      // Terminée
+  CANCELLED      // Annulée
+  DECLINED       // Refusée
+}
+
+enum UserType {
+  PARENT
+  ANIMATOR
+}
+
+enum AnalyticType {
+  BEHAVIOR       // Analyse comportementale
+  ALERT          // Alerte (signal récurrent)
+  SUMMARY        // Synthèse périodique
+  PATTERN        // Détection de pattern
+}

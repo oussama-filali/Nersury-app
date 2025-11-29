@@ -1,0 +1,32 @@
+# Global ignores
+node_modules/
+dist/
+.tmp/
+
+# Backend specific
+backend/node_modules/
+backend/dist/
+backend/logs/
+backend/uploads/
+backend/temp/
+
+# Environment & secrets
+.env
+.env.*
+backend/.env
+backend/.env.*
+*.pem
+*.key
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# Database & runtime data
+pgdata/
+backend/prisma/migrations/
+coverage/

@@ -6,17 +6,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: development
       PORT: 3000
+      HOST: 0.0.0.0
       # Connexion DB interne au réseau Docker
       DATABASE_URL: postgresql://nursery_user:nursery_pass@postgres:5432/nursery_db?schema=public
-      # Clés de sécurité (à synchroniser avec .env ou injecter)
-      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_SECRET_KEY_IN_PRODUCTION_USE_STRONG_RANDOM_STRING}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-CHANGE_THIS_REFRESH_SECRET_KEY_IN_PRODUCTION}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-CHANGE_THIS_32_CHAR_ENCRYPTION_KEY_FOR_SENSITIVE_DATA_AES256}
     depends_on:
       - postgres
     volumes:

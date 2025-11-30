@@ -1,0 +1,18 @@
+# Exclude large or sensitive files from Docker build context
+.git
+.gitignore
+node_modules
+**/node_modules
+backend/dist
+backend/logs
+backend/uploads
+backend/temp
+pgdata
+.env
+backend/.env
+backend/.env.*
+docs
+.vscode
+.idea
+*.md
+Dockerfile
